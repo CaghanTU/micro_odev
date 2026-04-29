@@ -1,14 +1,49 @@
 #include "logger.h"
 
+#include <LittleFS.h>
+
 namespace {
 LogEntry logEntries[LOG_CAPACITY];
 uint8_t logHead = 0;
 uint8_t logSize = 0;
+bool persistentLogReady = false;
+
+void appendPersistentLog(uint32_t secondsSinceBoot, const String &message) {
+  if (!persistentLogReady) {
+    return;
+  }
+
+  File file = LittleFS.open(PERSISTENT_LOG_PATH, FILE_APPEND);
+  if (!file) {
+    return;
+  }
+
+  String sanitized = message;
+  sanitized.replace("\"", "\"\"");
+
+  file.print(loggerFormatTimestamp(secondsSinceBoot));
+  file.print(",\"");
+  file.print(sanitized);
+  file.println("\"");
+  file.close();
+}
 }
 
 void loggerInit() {
   logHead = 0;
   logSize = 0;
+  persistentLogReady = false;
+
+  if (PERSIST_LOG_TO_INTERNAL_FLASH) {
+    persistentLogReady = LittleFS.begin(true);
+    if (persistentLogReady && !LittleFS.exists(PERSISTENT_LOG_PATH)) {
+      File file = LittleFS.open(PERSISTENT_LOG_PATH, FILE_WRITE);
+      if (file) {
+        file.println("time,message");
+        file.close();
+      }
+    }
+  }
 }
 
 String loggerFormatTimestamp(uint32_t secondsSinceBoot) {
@@ -38,6 +73,8 @@ void loggerAdd(SystemData &data, const String &message) {
   Serial.print(loggerFormatTimestamp(nowSeconds));
   Serial.print(' ');
   Serial.println(message);
+
+  appendPersistentLog(nowSeconds, message);
 }
 
 uint8_t loggerCount() {

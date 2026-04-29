@@ -6,7 +6,10 @@
 #include "logger.h"
 
 namespace {
-DHT dht(DHT_PIN, DHT_SENSOR_TYPE);
+DHT dhtSensors[DHT_SENSOR_PIN_COUNT] = {
+    DHT(DHT_SENSOR_PINS[0], DHT_SENSOR_TYPE),
+    DHT(DHT_SENSOR_PINS[1], DHT_SENSOR_TYPE),
+};
 
 bool retryPending = false;
 bool firstSample = true;
@@ -19,14 +22,32 @@ bool millisDue(unsigned long now, unsigned long dueTime) {
 }
 
 bool readDht(SystemData &data, bool forceRead) {
-  const float humidity = dht.readHumidity(forceRead);
-  // readHumidity() performs the physical DHT transaction. Temperature is then
-  // taken from the same cached sample, avoiding a second forced DHT read.
-  const float temperature = dht.readTemperature(false, false);
+  float temperatureSum = 0.0F;
+  float humiditySum = 0.0F;
+  uint8_t validCount = 0;
 
-  if (isnan(humidity) || isnan(temperature)) {
+  const uint8_t activeSensorCount = min(DHT_SENSOR_COUNT, DHT_SENSOR_PIN_COUNT);
+
+  for (uint8_t i = 0; i < activeSensorCount; i++) {
+    const float humidity = dhtSensors[i].readHumidity(forceRead);
+    // readHumidity() performs the physical DHT transaction. Temperature is then
+    // taken from the same cached sample, avoiding a second forced DHT read.
+    const float temperature = dhtSensors[i].readTemperature(false, false);
+
+    if (!isnan(humidity) && !isnan(temperature)) {
+      temperatureSum += temperature;
+      humiditySum += humidity;
+      validCount++;
+    }
+  }
+
+  if (validCount == 0 ||
+      (REQUIRE_ALL_DHT_SENSORS_VALID && validCount < activeSensorCount)) {
     return false;
   }
+
+  const float temperature = temperatureSum / validCount;
+  const float humidity = humiditySum / validCount;
 
   data.currentTemperatureC = temperature;
   data.currentHumidityRh = humidity;
@@ -36,7 +57,8 @@ bool readDht(SystemData &data, bool forceRead) {
   data.sensorFaultActive = false;
 
   char buffer[48];
-  snprintf(buffer, sizeof(buffer), "Sensor OK T:%.1f H:%.1f", temperature, humidity);
+  snprintf(buffer, sizeof(buffer), "Sensor OK %u/%u T:%.1f H:%.1f",
+           validCount, activeSensorCount, temperature, humidity);
   loggerAdd(data, String(buffer));
   return true;
 }
@@ -119,7 +141,10 @@ void recordFailedSample(SystemData &data) {
 }
 
 void sensorsInit(SystemData &data) {
-  dht.begin();
+  const uint8_t activeSensorCount = min(DHT_SENSOR_COUNT, DHT_SENSOR_PIN_COUNT);
+  for (uint8_t i = 0; i < activeSensorCount; i++) {
+    dhtSensors[i].begin();
+  }
   retryPending = false;
   firstSample = true;
   lastSampleStartMs = 0;

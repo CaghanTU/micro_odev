@@ -5,14 +5,23 @@
 // ---------------------------------------------------------------------------
 // Hardware pin map
 // ---------------------------------------------------------------------------
-constexpr uint8_t DHT_PIN = 23;
+// Report component list includes 3 DHT22 modules, with 1 spare. Firmware v1
+// supports 2 active DHT22 sensors and averages all valid readings. The third
+// module is treated as the spare listed in the report. Set DHT_SENSOR_COUNT to
+// 1 if only one sensor is wired during prototype testing.
+constexpr uint8_t DHT_SENSOR_PIN_COUNT = 2;
+constexpr uint8_t DHT_SENSOR_COUNT = 2;
+constexpr uint8_t DHT_SENSOR_PINS[DHT_SENSOR_PIN_COUNT] = {23, 15};
+constexpr bool REQUIRE_ALL_DHT_SENSORS_VALID = true;
 
 constexpr uint8_t I2C_SDA_PIN = 21;
 constexpr uint8_t I2C_SCL_PIN = 22;
 
 constexpr uint8_t KEYPAD_ROWS = 4;
 constexpr uint8_t KEYPAD_COLS = 4;
-constexpr uint8_t KEYPAD_ROW_PINS[KEYPAD_ROWS] = {13, 14, 27, 5};
+// Matches the report keypad pin table. GPIO12 is a boot-strapping pin, so the
+// keypad must not pull it into an invalid level during ESP32 reset.
+constexpr uint8_t KEYPAD_ROW_PINS[KEYPAD_ROWS] = {13, 12, 14, 27};
 constexpr uint8_t KEYPAD_COL_PINS[KEYPAD_COLS] = {26, 25, 33, 32};
 
 constexpr uint8_t HEATER_PWM_PIN = 16;
@@ -144,4 +153,6 @@ constexpr const char *WIFI_AP_PASSWORD = "calibration123";
 // Logging and messages
 // ---------------------------------------------------------------------------
 constexpr uint8_t LOG_CAPACITY = 10;
+constexpr bool PERSIST_LOG_TO_INTERNAL_FLASH = true;
+constexpr const char *PERSISTENT_LOG_PATH = "/calibration_log.csv";
 constexpr uint8_t MAX_SETPOINT_INPUT_DIGITS = 3;
