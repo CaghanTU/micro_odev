@@ -23,7 +23,7 @@ The implementation is divided into the following modules:
 | `display.cpp` | Updates the 20x4 I2C LCD display with current readings, setpoints, state, and last message. |
 | `keypad_input.cpp` | Handles keypad input for temperature and humidity setpoints and alarm acknowledgement. |
 | `logger.cpp` | Stores the last 10 events in a RAM ring buffer and appends logs to ESP32 internal flash using LittleFS. |
-| `web_dashboard.cpp` | Starts the ESP32 Access Point and serves a read-only web dashboard. |
+| `web_dashboard.cpp` | Starts the ESP32 Access Point and serves the monitoring and setpoint-control web dashboard. |
 | `main.cpp` | Initializes modules and coordinates periodic updates in the main loop. |
 
 ## 3. Main Control Loop
@@ -117,7 +117,9 @@ The ESP32 operates in Access Point mode using:
 | Password | `calibration123` |
 | Address | `http://192.168.4.1` |
 
-The web dashboard is read-only. It displays current temperature, current humidity, temperature setpoint, humidity setpoint, system state, last message, and the last 10 log entries. The page automatically refreshes every 5 seconds. Log and message strings are HTML-escaped before rendering to avoid malformed dashboard output.
+The web dashboard displays current temperature, current humidity, temperature setpoint, humidity setpoint, system state, last message, and the last 10 log entries. It also provides a simple setpoint form so the user can update the temperature and humidity setpoints from a browser on the local ESP32 network. Submitted values are validated against the same safe ranges used by the keypad: 0-50°C and 20-100% RH.
+
+The dashboard refreshes automatically every 5 seconds while avoiding refresh during active input focus. Log and message strings are HTML-escaped before rendering to avoid malformed dashboard output.
 
 ## 9. Logging Strategy
 
@@ -167,5 +169,6 @@ When the hardware is available, the following tests should be performed:
 - Confirm low fan speed during stable circulation and humidifying.
 - Simulate or carefully test overtemperature behavior and verify heater/Peltier cutoff at 50°C.
 - Confirm buzzer activation during alarms and acknowledgement with key `#` only after the fault is cleared.
-- Connect a phone or laptop to `CalibCabinet_AP` and verify the read-only dashboard at `http://192.168.4.1`.
+- Connect a phone or laptop to `CalibCabinet_AP` and verify the dashboard at `http://192.168.4.1`.
 - Confirm that the dashboard refreshes every 5 seconds and shows the last 10 log entries.
+- Update temperature and humidity setpoints from the web dashboard and confirm that invalid values are rejected.
