@@ -16,8 +16,8 @@ The implementation is divided into the following modules:
 |---|---|
 | `config.h` | Stores all hardware constants, timing values, setpoint limits, safety thresholds, Wi-Fi settings, PWM values, and hardware notes. |
 | `system_types.h` | Defines the `SystemState` enum, alarm reason enum, and shared `SystemData` structure. |
-| `sensors.cpp` | Reads the DHT22 sensor, performs non-blocking retry handling, tracks sensor failures, and supports optional simulation mode. |
-| `actuators.cpp` | Controls heater, Peltier, humidifier, fan, and buzzer outputs using ESP32 LEDC PWM or configurable digital fallback. |
+| `sensors.cpp` | Reads the DHT11 sensor, performs non-blocking retry handling, tracks sensor failures, and supports optional simulation mode. |
+| `actuators.cpp` | Controls heater, Peltier, mist maker, circulation fan, Peltier cooling fan, and buzzer outputs using ESP32 LEDC PWM or configurable digital fallback. |
 | `controller.cpp` | Implements the main safety and environmental control logic. |
 | `alarm.cpp` | Sets, maintains, and acknowledges alarm states. |
 | `display.cpp` | Updates the 20x4 I2C LCD display with current readings, setpoints, state, and last message. |
@@ -42,13 +42,13 @@ The loop does not use `delay()`. Each module decides internally whether its upda
 
 ## 4. Sensor Acquisition and Retry Logic
 
-The system supports two active DHT22 sensors, matching the report component list of three DHT22 modules where one module is treated as a spare. The default active sensor pins are GPIO23 and GPIO15. Both active sensors must return valid data; their readings are averaged to obtain the cabinet temperature and humidity. If only one sensor is available during prototype testing, the active sensor count can be reduced in `config.h`.
+The system uses one DHT11 sensor connected to D4/GPIO4, matching the technical design report. The sensor provides both temperature and relative humidity data to the ESP32.
 
-Normal sensor sampling occurs every 2 seconds. If the first read fails, the firmware schedules one short non-blocking retry after 250 ms. A failed sample attempt is counted only if all active sensors fail during both the normal read and the retry.
+Normal sensor sampling occurs every 2 seconds. If the first read fails, the firmware schedules one short non-blocking retry after 250 ms. A failed sample attempt is counted only if the normal read and retry both fail.
 
 The last valid temperature and humidity readings are not overwritten with invalid or `NaN` values. After any successful reading, the sensor failure counter is reset to zero. If three consecutive sample attempts fail, the system enters the `ALARM` state with the message `Sensor Error`.
 
-For hardware-free verification, a compile-time simulation mode is available but disabled by default. In simulation mode, fake temperature and humidity values are generated so the control logic, LCD state, web dashboard, alarms, and logs can be compiled and exercised without a DHT22 sensor.
+For hardware-free verification, a compile-time simulation mode is available but disabled by default. In simulation mode, fake temperature and humidity values are generated so the control logic, LCD state, web dashboard, alarms, and logs can be compiled and exercised without a DHT11 sensor.
 
 ## 5. Temperature and Humidity Control Logic
 
@@ -59,7 +59,7 @@ Temperature control uses a tolerance of ±1°C:
 | Condition | Action |
 |---|---|
 | Temperature < setpoint - 1°C | Heater enabled, Peltier disabled, fan low. |
-| Temperature > setpoint + 1°C | Peltier enabled, heater disabled, fan high. |
+| Temperature > setpoint + 1°C | Peltier enabled, heater disabled, circulation fan high, Peltier cooling fan high. |
 | Temperature within tolerance | Heater and Peltier disabled. |
 
 Humidity control uses a tolerance of ±5% RH:
@@ -76,17 +76,17 @@ The displayed `SystemState` represents the dominant control state. If temperatur
 
 Safety logic has priority over normal environmental control. The controller checks existing alarms, sensor failure, and overtemperature before applying normal heating, cooling, humidifying, or drying logic.
 
-If the measured temperature exceeds 45°C, the firmware enters `ALARM` with an overtemperature message. Heater, Peltier, and humidifier outputs are disabled immediately. During an overtemperature alarm, the fan runs at high speed.
+If the measured temperature exceeds 50°C, the firmware enters `ALARM` with an overtemperature message. Heater, Peltier, and humidifier outputs are disabled immediately. During an overtemperature alarm, the circulation fan and Peltier cooling fan run at high speed.
 
 If a sensor error alarm is active, the firmware does not continue normal control using stale readings. In `ALARM`, heater, Peltier, and humidifier remain disabled and the buzzer is enabled. For a sensor error alarm, the fan uses the configured safe alarm speed.
 
-The `C` key acknowledges alarms only when the unsafe condition is cleared. Overtemperature cannot be acknowledged while the temperature remains above the safety threshold. Sensor Error cannot be acknowledged until a later valid DHT22 reading has succeeded and the consecutive failure counter has returned to zero.
+The `#` key acknowledges alarms only when the unsafe condition is cleared and no setpoint input is waiting for confirmation. Overtemperature cannot be acknowledged while the temperature remains above the safety threshold. Sensor Error cannot be acknowledged until a later valid DHT11 reading has succeeded and the consecutive failure counter has returned to zero.
 
 ## 7. LCD and Keypad Interface
 
-The local interface consists of a 20x4 I2C LCD and a 4x4 matrix keypad. The firmware calls `Wire.begin(SDA, SCL)` before LCD initialization. The LCD address is configurable and defaults to `0x27`.
+The local interface consists of a 20x4 I2C LCD and a 4x3 matrix keypad. The firmware calls `Wire.begin(SDA, SCL)` before LCD initialization. The LCD address is configurable and defaults to `0x27`.
 
-The keypad row pins are GPIO13, GPIO12, GPIO14, and GPIO27, and the column pins are GPIO26, GPIO25, GPIO33, and GPIO32. This matches the pin table in the hardware report. Since GPIO12 is an ESP32 boot-strapping pin, the keypad circuit should not force this pin into an invalid boot level during reset.
+The keypad row pins are GPIO26, GPIO15, GPIO32, and GPIO33, and the column pins are GPIO13, GPIO12, and GPIO14. This matches the pin table in the technical design report. Since GPIO12 is an ESP32 boot-strapping pin, the keypad circuit should not force this pin into an invalid boot level during reset.
 
 LCD layout:
 
@@ -101,15 +101,11 @@ Keypad functions:
 
 | Key | Function |
 |---|---|
-| `A` | Enter temperature setpoint input mode. |
-| `B` | Enter humidity setpoint input mode. |
 | `0-9` | Enter integer setpoint digits. |
-| `#` | Confirm input. |
-| `*` | Cancel input. |
-| `C` | Acknowledge alarm if safe. |
-| `D` | Reserved for future use. |
+| `*` | Toggle between temperature and humidity setpoint input modes. |
+| `#` | Confirm the entered value, or acknowledge an alarm when no input is pending. |
 
-Setpoints are integer values in this firmware version. Temperature setpoints outside 0-40°C and humidity setpoints outside 20-100% RH are rejected, the previous value is kept, and an invalid input event is logged.
+Setpoints are integer values in this firmware version. Temperature setpoints outside 0-50°C and humidity setpoints outside 20-100% RH are rejected, the previous value is kept, and an invalid input event is logged.
 
 ## 8. Web Dashboard
 
@@ -150,7 +146,7 @@ Hardware-free verification was performed without connecting the ESP32 or physica
 | Static review of non-blocking loop timing | Passed |
 | Static review of LCD, keypad, web, and logging coverage | Passed |
 
-The physical ESP32 board, DHT22 sensors, LCD, keypad, MOSFET drivers, fan, humidifier, heater, Peltier module, and buzzer have not yet been tested with this firmware. Physical hardware testing will be performed when the assembled system is available.
+The physical ESP32 board, DHT11 sensor, LCD, keypad, MOSFET drivers, fans, humidifier, heater, Peltier module, and buzzer have not yet been tested with this firmware. Physical hardware testing will be performed when the assembled system is available.
 
 ## 11. Hardware Test Checklist for Later
 
@@ -159,9 +155,8 @@ When the hardware is available, the following tests should be performed:
 - Upload the firmware to the ESP32 using PlatformIO.
 - Confirm serial monitor boot messages.
 - Verify that the LCD initializes at address `0x27`; try `0x3F` if no display appears.
-- Confirm that DHT22 readings appear every 2 seconds.
-- Confirm that both active DHT22 sensors are detected and that readings are averaged.
-- Disconnect or miswire the DHT22 temporarily to verify Sensor Error behavior after three failed sample attempts.
+- Confirm that DHT11 readings appear every 2 seconds.
+- Disconnect or miswire the DHT11 temporarily to verify Sensor Error behavior after three failed sample attempts.
 - Enter valid and invalid temperature setpoints using the keypad.
 - Enter valid and invalid humidity setpoints using the keypad.
 - Confirm that the heater output activates only below the temperature setpoint tolerance.
@@ -170,7 +165,7 @@ When the hardware is available, the following tests should be performed:
 - Confirm humidifier activation below the humidity tolerance.
 - Confirm high fan speed during drying and cooling.
 - Confirm low fan speed during stable circulation and humidifying.
-- Simulate or carefully test overtemperature behavior and verify heater/Peltier cutoff at 45°C.
-- Confirm buzzer activation during alarms and acknowledgement with key `C` only after the fault is cleared.
+- Simulate or carefully test overtemperature behavior and verify heater/Peltier cutoff at 50°C.
+- Confirm buzzer activation during alarms and acknowledgement with key `#` only after the fault is cleared.
 - Connect a phone or laptop to `CalibCabinet_AP` and verify the read-only dashboard at `http://192.168.4.1`.
 - Confirm that the dashboard refreshes every 5 seconds and shows the last 10 log entries.

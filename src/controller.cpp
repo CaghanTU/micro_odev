@@ -15,8 +15,10 @@ void applyAlarmOutputs(SystemData &data) {
 
   if (data.overTemperatureActive) {
     setFanSpeed(data, FAN_HIGH_COOLING);
+    setCoolingFanSpeed(data, COOLING_FAN_ON);
   } else {
     setFanSpeed(data, FAN_ALARM_SENSOR);
+    setCoolingFanSpeed(data, COOLING_FAN_OFF);
   }
 }
 }
@@ -62,6 +64,7 @@ void controllerUpdate(SystemData &data) {
     data.state = IDLE;
     disableUnsafeActuators(data);
     setFanSpeed(data, FAN_OFF);
+    setCoolingFanSpeed(data, COOLING_FAN_OFF);
     setBuzzer(data, false);
     return;
   }
@@ -81,6 +84,7 @@ void controllerUpdate(SystemData &data) {
   uint8_t peltierPower = 0;
   bool humidifierEnabled = false;
   uint8_t fanSpeed = FAN_OFF;
+  uint8_t coolingFanSpeed = COOLING_FAN_OFF;
   SystemState dominantState = STABLE;
 
   if (needsHeating) {
@@ -92,6 +96,7 @@ void controllerUpdate(SystemData &data) {
     peltierPower = PELTIER_ON_POWER;
     heaterPower = 0;
     fanSpeed = maxFanSpeed(fanSpeed, FAN_HIGH_COOLING);
+    coolingFanSpeed = COOLING_FAN_ON;
     dominantState = COOLING;
   }
 
@@ -117,6 +122,7 @@ void controllerUpdate(SystemData &data) {
   setPeltierPower(data, peltierPower);
   setHumidifier(data, humidifierEnabled);
   setFanSpeed(data, fanSpeed);
+  setCoolingFanSpeed(data, coolingFanSpeed);
   setBuzzer(data, false);
   data.state = dominantState;
 }

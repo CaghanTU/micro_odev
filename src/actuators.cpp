@@ -50,7 +50,8 @@ void actuatorsInit(SystemData &data) {
   configureOutputPin(HEATER_PWM_PIN, HEATER_PWM_CHANNEL);
   configureOutputPin(PELTIER_PWM_PIN, PELTIER_PWM_CHANNEL);
   configureOutputPin(HUMIDIFIER_PIN, HUMIDIFIER_PWM_CHANNEL);
-  configureOutputPin(FAN_PWM_PIN, FAN_PWM_CHANNEL);
+  configureOutputPin(CIRCULATION_FAN_PWM_PIN, CIRCULATION_FAN_PWM_CHANNEL);
+  configureOutputPin(COOLING_FAN_PWM_PIN, COOLING_FAN_PWM_CHANNEL);
   pinMode(BUZZER_PIN, OUTPUT);
 
   disableAllActuators(data);
@@ -90,8 +91,14 @@ void setHumidifier(SystemData &data, bool enabled) {
 
 void setFanSpeed(SystemData &data, uint8_t speed) {
   speed = clampDuty(speed);
-  writePwmOutput(FAN_PWM_PIN, FAN_PWM_CHANNEL, speed);
+  writePwmOutput(CIRCULATION_FAN_PWM_PIN, CIRCULATION_FAN_PWM_CHANNEL, speed);
   data.fanSpeed = speed;
+}
+
+void setCoolingFanSpeed(SystemData &data, uint8_t speed) {
+  speed = clampDuty(speed);
+  writePwmOutput(COOLING_FAN_PWM_PIN, COOLING_FAN_PWM_CHANNEL, speed);
+  data.coolingFanSpeed = speed;
 }
 
 void setBuzzer(SystemData &data, bool enabled) {
@@ -110,5 +117,6 @@ void disableAllActuators(SystemData &data) {
   setPeltierPower(data, 0);
   setHumidifier(data, false);
   setFanSpeed(data, FAN_OFF);
+  setCoolingFanSpeed(data, COOLING_FAN_OFF);
   setBuzzer(data, false);
 }

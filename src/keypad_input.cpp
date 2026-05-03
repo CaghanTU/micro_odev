@@ -12,17 +12,16 @@
 
 namespace {
 char keymap[KEYPAD_ROWS][KEYPAD_COLS] = {
-    {'1', '2', '3', 'A'},
-    {'4', '5', '6', 'B'},
-    {'7', '8', '9', 'C'},
-    {'*', '0', '#', 'D'}};
+    {'1', '2', '3'},
+    {'4', '5', '6'},
+    {'7', '8', '9'},
+    {'*', '0', '#'}};
 
 byte rowPins[KEYPAD_ROWS] = {
     KEYPAD_ROW_PINS[0], KEYPAD_ROW_PINS[1],
     KEYPAD_ROW_PINS[2], KEYPAD_ROW_PINS[3]};
 byte colPins[KEYPAD_COLS] = {
-    KEYPAD_COL_PINS[0], KEYPAD_COL_PINS[1],
-    KEYPAD_COL_PINS[2], KEYPAD_COL_PINS[3]};
+    KEYPAD_COL_PINS[0], KEYPAD_COL_PINS[1], KEYPAD_COL_PINS[2]};
 
 Keypad keypad = Keypad(makeKeymap(keymap), rowPins, colPins, KEYPAD_ROWS, KEYPAD_COLS);
 
@@ -49,7 +48,7 @@ void cancelInput(SystemData &data) {
 
 void appendDigit(SystemData &data, char key) {
   if (inputMode == INPUT_NONE) {
-    return;
+    beginInput(data, INPUT_TEMPERATURE);
   }
 
   if (inputBuffer.length() >= MAX_SETPOINT_INPUT_DIGITS) {
@@ -60,6 +59,15 @@ void appendDigit(SystemData &data, char key) {
   inputBuffer += key;
   data.lastMessage = inputMode == INPUT_TEMPERATURE ? "Temp: " : "Humidity: ";
   data.lastMessage += inputBuffer;
+}
+
+void toggleInputMode(SystemData &data) {
+  if (inputMode == INPUT_TEMPERATURE) {
+    beginInput(data, INPUT_HUMIDITY);
+    return;
+  }
+
+  beginInput(data, INPUT_TEMPERATURE);
 }
 
 void confirmInput(SystemData &data) {
@@ -123,23 +131,17 @@ void keypadInputUpdate(SystemData &data) {
   }
 
   switch (key) {
-    case 'A':
-      beginInput(data, INPUT_TEMPERATURE);
-      break;
-    case 'B':
-      beginInput(data, INPUT_HUMIDITY);
-      break;
     case '#':
-      confirmInput(data);
+      if (inputMode != INPUT_NONE && inputBuffer.length() > 0) {
+        confirmInput(data);
+      } else {
+        inputMode = INPUT_NONE;
+        inputBuffer = "";
+        alarmAcknowledge(data);
+      }
       break;
     case '*':
-      cancelInput(data);
-      break;
-    case 'C':
-      alarmAcknowledge(data);
-      break;
-    case 'D':
-      data.lastMessage = "D reserved";
+      toggleInputMode(data);
       break;
     default:
       break;

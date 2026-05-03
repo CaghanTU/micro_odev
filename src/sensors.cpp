@@ -8,7 +8,6 @@
 namespace {
 DHT dhtSensors[DHT_SENSOR_PIN_COUNT] = {
     DHT(DHT_SENSOR_PINS[0], DHT_SENSOR_TYPE),
-    DHT(DHT_SENSOR_PINS[1], DHT_SENSOR_TYPE),
 };
 
 bool retryPending = false;

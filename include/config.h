@@ -5,33 +5,33 @@
 // ---------------------------------------------------------------------------
 // Hardware pin map
 // ---------------------------------------------------------------------------
-// Report component list includes 3 DHT22 modules, with 1 spare. Firmware v1
-// supports 2 active DHT22 sensors and averages all valid readings. The third
-// module is treated as the spare listed in the report. Set DHT_SENSOR_COUNT to
-// 1 if only one sensor is wired during prototype testing.
-constexpr uint8_t DHT_SENSOR_PIN_COUNT = 2;
-constexpr uint8_t DHT_SENSOR_COUNT = 2;
-constexpr uint8_t DHT_SENSOR_PINS[DHT_SENSOR_PIN_COUNT] = {23, 15};
+// Technical design report uses one DHT11 sensor connected to D4/GPIO4.
+constexpr uint8_t DHT_SENSOR_PIN_COUNT = 1;
+constexpr uint8_t DHT_SENSOR_COUNT = 1;
+constexpr uint8_t DHT_SENSOR_PINS[DHT_SENSOR_PIN_COUNT] = {4};
 constexpr bool REQUIRE_ALL_DHT_SENSORS_VALID = true;
 
 constexpr uint8_t I2C_SDA_PIN = 21;
 constexpr uint8_t I2C_SCL_PIN = 22;
 
 constexpr uint8_t KEYPAD_ROWS = 4;
-constexpr uint8_t KEYPAD_COLS = 4;
-// Matches the report keypad pin table. GPIO12 is a boot-strapping pin, so the
-// keypad must not pull it into an invalid level during ESP32 reset.
-constexpr uint8_t KEYPAD_ROW_PINS[KEYPAD_ROWS] = {13, 12, 14, 27};
-constexpr uint8_t KEYPAD_COL_PINS[KEYPAD_COLS] = {26, 25, 33, 32};
+constexpr uint8_t KEYPAD_COLS = 3;
+// Technical design report 4x3 keypad mapping:
+// rows D26,D15,D32,D33 and columns D13,D12,D14.
+// GPIO12 is a boot-strapping pin, so the keypad must not pull it into an
+// invalid level during ESP32 reset.
+constexpr uint8_t KEYPAD_ROW_PINS[KEYPAD_ROWS] = {26, 15, 32, 33};
+constexpr uint8_t KEYPAD_COL_PINS[KEYPAD_COLS] = {13, 12, 14};
 
-constexpr uint8_t HEATER_PWM_PIN = 16;
-constexpr uint8_t PELTIER_PWM_PIN = 17;
+constexpr uint8_t HEATER_PWM_PIN = 27;
+constexpr uint8_t PELTIER_PWM_PIN = 5;
 constexpr uint8_t HUMIDIFIER_PIN = 18;
-constexpr uint8_t FAN_PWM_PIN = 19;
+constexpr uint8_t CIRCULATION_FAN_PWM_PIN = 23;
+constexpr uint8_t COOLING_FAN_PWM_PIN = 19;
 
 // Active 5V buzzer should be driven through a transistor/MOSFET or suitable
 // driver circuit, not directly from ESP32 GPIO if current exceeds GPIO limits.
-constexpr uint8_t BUZZER_PIN = 4;
+constexpr uint8_t BUZZER_PIN = 25;
 constexpr uint8_t BUZZER_ACTIVE_LEVEL = HIGH;
 constexpr uint8_t BUZZER_INACTIVE_LEVEL = LOW;
 
@@ -63,12 +63,12 @@ constexpr unsigned long MILLIS_ROLLOVER_HALF_RANGE = 0x80000000UL;
 // ---------------------------------------------------------------------------
 // Sensor configuration
 // ---------------------------------------------------------------------------
-// Adafruit DHT library uses DHT22 as sensor type value 22.
-constexpr uint8_t DHT_SENSOR_TYPE = 22;
+// Adafruit DHT library uses DHT11 as sensor type value 11.
+constexpr uint8_t DHT_SENSOR_TYPE = 11;
 constexpr uint8_t SENSOR_FAILURE_LIMIT = 3;
 
 // Hardware-free verification mode. Keep disabled for real hardware. When set
-// to 1, sensors.cpp generates fake DHT22 readings so controller, LCD, web,
+// to 1, sensors.cpp generates fake DHT11 readings so controller, LCD, web,
 // alarms, and logs can be exercised without a physical sensor.
 #ifndef ENABLE_SIMULATION_MODE
 #define ENABLE_SIMULATION_MODE 0
@@ -96,15 +96,15 @@ constexpr float DEFAULT_TEMPERATURE_SETPOINT_C = 25.0F;
 constexpr float DEFAULT_HUMIDITY_SETPOINT_RH = 60.0F;
 
 constexpr float MIN_TEMPERATURE_SETPOINT_C = 0.0F;
-constexpr float MAX_TEMPERATURE_SETPOINT_C = 40.0F;
+constexpr float MAX_TEMPERATURE_SETPOINT_C = 50.0F;
 constexpr float MIN_HUMIDITY_SETPOINT_RH = 20.0F;
 constexpr float MAX_HUMIDITY_SETPOINT_RH = 100.0F;
 
 constexpr float TEMPERATURE_TOLERANCE_C = 1.0F;
 constexpr float HUMIDITY_TOLERANCE_RH = 5.0F;
 
-constexpr float OVER_TEMPERATURE_THRESHOLD_C = 45.0F;
-constexpr float OVER_TEMPERATURE_CLEAR_C = 45.0F;
+constexpr float OVER_TEMPERATURE_THRESHOLD_C = 50.0F;
+constexpr float OVER_TEMPERATURE_CLEAR_C = 50.0F;
 
 // PID constants are provided for future tuning. The v1 firmware uses safe
 // threshold control by default instead of depending on aggressive PID tuning.
@@ -131,7 +131,8 @@ constexpr uint8_t PWM_MAX_DUTY = 255;
 constexpr uint8_t HEATER_PWM_CHANNEL = 0;
 constexpr uint8_t PELTIER_PWM_CHANNEL = 1;
 constexpr uint8_t HUMIDIFIER_PWM_CHANNEL = 2;
-constexpr uint8_t FAN_PWM_CHANNEL = 3;
+constexpr uint8_t CIRCULATION_FAN_PWM_CHANNEL = 3;
+constexpr uint8_t COOLING_FAN_PWM_CHANNEL = 4;
 
 constexpr uint8_t HEATER_ON_POWER = 220;
 constexpr uint8_t PELTIER_ON_POWER = 220;
@@ -142,6 +143,8 @@ constexpr uint8_t FAN_LOW_CIRCULATION = 85;
 constexpr uint8_t FAN_HIGH_DRYING = 220;
 constexpr uint8_t FAN_HIGH_COOLING = 220;
 constexpr uint8_t FAN_ALARM_SENSOR = FAN_OFF;
+constexpr uint8_t COOLING_FAN_OFF = FAN_OFF;
+constexpr uint8_t COOLING_FAN_ON = FAN_HIGH_COOLING;
 
 // ---------------------------------------------------------------------------
 // Wi-Fi dashboard

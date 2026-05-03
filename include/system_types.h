@@ -72,4 +72,5 @@ struct SystemData {
   uint8_t heaterPower = 0;
   uint8_t peltierPower = 0;
   uint8_t fanSpeed = FAN_OFF;
+  uint8_t coolingFanSpeed = COOLING_FAN_OFF;
 };
