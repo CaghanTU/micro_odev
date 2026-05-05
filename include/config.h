@@ -94,6 +94,9 @@ constexpr uint16_t SIMULATION_FORCE_OVERTEMP_AFTER_SAMPLES = 0;
 // ---------------------------------------------------------------------------
 constexpr float DEFAULT_TEMPERATURE_SETPOINT_C = 25.0F;
 constexpr float DEFAULT_HUMIDITY_SETPOINT_RH = 60.0F;
+// Keep outputs idle after boot. Control starts only after a valid setpoint is
+// entered from the keypad or web dashboard.
+constexpr bool START_CONTROL_ON_BOOT = false;
 
 constexpr float MIN_TEMPERATURE_SETPOINT_C = 0.0F;
 constexpr float MAX_TEMPERATURE_SETPOINT_C = 50.0F;

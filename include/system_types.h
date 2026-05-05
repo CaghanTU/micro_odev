@@ -60,6 +60,7 @@ struct SystemData {
   bool sensorFaultActive = false;
   bool overTemperatureActive = false;
   bool hasValidSensorReading = false;
+  bool controlEnabled = START_CONTROL_ON_BOOT;
 
   String lastMessage = "Booting";
   unsigned long lastValidSensorTimestamp = 0;

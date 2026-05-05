@@ -69,6 +69,15 @@ void controllerUpdate(SystemData &data) {
     return;
   }
 
+  if (!data.controlEnabled) {
+    data.state = IDLE;
+    disableUnsafeActuators(data);
+    setFanSpeed(data, FAN_OFF);
+    setCoolingFanSpeed(data, COOLING_FAN_OFF);
+    setBuzzer(data, false);
+    return;
+  }
+
   data.state = EVALUATING;
 
   const bool needsHeating =

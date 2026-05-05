@@ -17,6 +17,7 @@ void setup() {
   systemData.state = INIT;
   systemData.temperatureSetpointC = DEFAULT_TEMPERATURE_SETPOINT_C;
   systemData.humiditySetpointRh = DEFAULT_HUMIDITY_SETPOINT_RH;
+  systemData.controlEnabled = START_CONTROL_ON_BOOT;
   systemData.lastMessage = "Booting";
 
   loggerInit();

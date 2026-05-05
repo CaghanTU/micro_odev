@@ -114,6 +114,9 @@ void handleRoot() {
   }
   html += F("</div><p>");
   html += htmlEscape(data.lastMessage);
+  if (!data.controlEnabled && !data.alarmActive) {
+    html += F("<br>Control waiting for setpoint input");
+  }
   html += F("</p></div>");
 
   if (webNotice.length() > 0) {
@@ -185,6 +188,7 @@ void handleSetpoints() {
 
   data.temperatureSetpointC = newTemperature;
   data.humiditySetpointRh = newHumidity;
+  data.controlEnabled = true;
   webNotice = "Web setpoints updated";
   loggerAdd(data, "Web SP T:" + String(newTemperature, 0) +
                  "C H:" + String(newHumidity, 0) + "%");

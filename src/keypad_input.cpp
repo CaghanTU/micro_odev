@@ -88,6 +88,7 @@ void confirmInput(SystemData &data) {
       loggerAdd(data, "Invalid temp setpoint");
     } else {
       data.temperatureSetpointC = static_cast<float>(value);
+      data.controlEnabled = true;
       loggerAdd(data, "Temp SP: " + String(value) + "C");
     }
   } else if (inputMode == INPUT_HUMIDITY) {
@@ -96,6 +97,7 @@ void confirmInput(SystemData &data) {
       loggerAdd(data, "Invalid humidity setpoint");
     } else {
       data.humiditySetpointRh = static_cast<float>(value);
+      data.controlEnabled = true;
       loggerAdd(data, "Humidity SP: " + String(value) + "%");
     }
   }
