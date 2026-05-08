@@ -1,12 +1,5 @@
 #include "keypad_input.h"
 
-// Keypad.h defines a global enum value named IDLE. The project requirements
-// also require a SystemState value named IDLE, so isolate the library token in
-// this translation unit without changing the required firmware enum.
-#define IDLE KEYPAD_LIBRARY_IDLE
-#include <Keypad.h>
-#undef IDLE
-
 #include "alarm.h"
 #include "logger.h"
 
@@ -23,8 +16,6 @@ byte rowPins[KEYPAD_ROWS] = {
 byte colPins[KEYPAD_COLS] = {
     KEYPAD_COL_PINS[0], KEYPAD_COL_PINS[1], KEYPAD_COL_PINS[2]};
 
-Keypad keypad = Keypad(makeKeymap(keymap), rowPins, colPins, KEYPAD_ROWS, KEYPAD_COLS);
-
 enum InputMode {
   INPUT_NONE,
   INPUT_TEMPERATURE,
@@ -33,6 +24,72 @@ enum InputMode {
 
 InputMode inputMode = INPUT_NONE;
 String inputBuffer;
+uint8_t lastKeyRow = 0;
+uint8_t lastKeyCol = 0;
+unsigned long lastStarPressMs = 0;
+
+void configureKeypadPinsIdle() {
+  for (uint8_t row = 0; row < KEYPAD_ROWS; row++) {
+    pinMode(rowPins[row], OUTPUT);
+    digitalWrite(rowPins[row], HIGH);
+  }
+  for (uint8_t col = 0; col < KEYPAD_COLS; col++) {
+    pinMode(colPins[col], INPUT_PULLUP);
+  }
+}
+
+char keyAt(uint8_t row, uint8_t col) {
+  if (row >= KEYPAD_ROWS || col >= KEYPAD_COLS) {
+    return '\0';
+  }
+
+  return keymap[row][col];
+}
+
+void scanKeypadMatrix(bool pressed[KEYPAD_ROWS][KEYPAD_COLS]) {
+  for (uint8_t row = 0; row < KEYPAD_ROWS; row++) {
+    digitalWrite(rowPins[row], HIGH);
+  }
+
+  for (uint8_t row = 0; row < KEYPAD_ROWS; row++) {
+    digitalWrite(rowPins[row], LOW);
+    delayMicroseconds(5);
+
+    for (uint8_t col = 0; col < KEYPAD_COLS; col++) {
+      pressed[row][col] = digitalRead(colPins[col]) == LOW;
+    }
+
+    digitalWrite(rowPins[row], HIGH);
+  }
+}
+
+char readKeypadRaw() {
+  static bool previousPressed[KEYPAD_ROWS][KEYPAD_COLS] = {};
+  bool currentPressed[KEYPAD_ROWS][KEYPAD_COLS] = {};
+  scanKeypadMatrix(currentPressed);
+
+  char newKey = '\0';
+  uint8_t newRow = 0;
+  uint8_t newCol = 0;
+  for (uint8_t row = 0; row < KEYPAD_ROWS; row++) {
+    for (uint8_t col = 0; col < KEYPAD_COLS; col++) {
+      if (currentPressed[row][col] && !previousPressed[row][col] && !newKey) {
+        newKey = keyAt(row, col);
+        newRow = row + 1;
+        newCol = col + 1;
+      }
+      previousPressed[row][col] = currentPressed[row][col];
+    }
+  }
+
+  if (!newKey) {
+    return '\0';
+  }
+
+  lastKeyRow = newRow;
+  lastKeyCol = newCol;
+  return newKey;
+}
 
 void beginInput(SystemData &data, InputMode mode) {
   inputMode = mode;
@@ -61,13 +118,18 @@ void appendDigit(SystemData &data, char key) {
   data.lastMessage += inputBuffer;
 }
 
-void toggleInputMode(SystemData &data) {
-  if (inputMode == INPUT_TEMPERATURE) {
+void handleStarKey(SystemData &data) {
+  const unsigned long now = millis();
+  if (inputMode == INPUT_TEMPERATURE &&
+      inputBuffer.length() == 0 &&
+      now - lastStarPressMs < 10000UL) {
     beginInput(data, INPUT_HUMIDITY);
+    lastStarPressMs = 0;
     return;
   }
 
   beginInput(data, INPUT_TEMPERATURE);
+  lastStarPressMs = now;
 }
 
 void confirmInput(SystemData &data) {
@@ -110,6 +172,7 @@ void confirmInput(SystemData &data) {
 void keypadInputInit(SystemData &data) {
   inputMode = INPUT_NONE;
   inputBuffer = "";
+  configureKeypadPinsIdle();
   data.lastMessage = "Keypad ready";
 }
 
@@ -122,7 +185,7 @@ void keypadInputUpdate(SystemData &data) {
   }
   lastScanMs = now;
 
-  const char key = keypad.getKey();
+  const char key = readKeypadRaw();
   if (!key) {
     return;
   }
@@ -143,7 +206,11 @@ void keypadInputUpdate(SystemData &data) {
       }
       break;
     case '*':
-      toggleInputMode(data);
+      if (inputMode != INPUT_NONE && inputBuffer.length() > 0) {
+        confirmInput(data);
+      } else {
+        handleStarKey(data);
+      }
       break;
     default:
       break;
