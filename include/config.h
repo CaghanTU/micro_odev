@@ -104,7 +104,7 @@ constexpr float MIN_HUMIDITY_SETPOINT_RH = 20.0F;
 constexpr float MAX_HUMIDITY_SETPOINT_RH = 100.0F;
 
 constexpr float TEMPERATURE_TOLERANCE_C = 1.0F;
-constexpr float HUMIDITY_TOLERANCE_RH = 5.0F;
+constexpr float HUMIDITY_TOLERANCE_RH = 2.0F;
 
 constexpr float OVER_TEMPERATURE_THRESHOLD_C = 50.0F;
 constexpr float OVER_TEMPERATURE_CLEAR_C = 50.0F;
@@ -138,7 +138,7 @@ constexpr uint8_t CIRCULATION_FAN_PWM_CHANNEL = 3;
 constexpr uint8_t COOLING_FAN_PWM_CHANNEL = 4;
 
 constexpr uint8_t HEATER_ON_POWER = 220;
-constexpr uint8_t PELTIER_ON_POWER = 220;
+constexpr uint8_t PELTIER_ON_POWER = 120;
 constexpr uint8_t HUMIDIFIER_ON_POWER = 255;
 
 constexpr uint8_t FAN_OFF = 0;
@@ -147,7 +147,7 @@ constexpr uint8_t FAN_HIGH_DRYING = 220;
 constexpr uint8_t FAN_HIGH_COOLING = 220;
 constexpr uint8_t FAN_ALARM_SENSOR = FAN_OFF;
 constexpr uint8_t COOLING_FAN_OFF = FAN_OFF;
-constexpr uint8_t COOLING_FAN_ON = FAN_HIGH_COOLING;
+constexpr uint8_t COOLING_FAN_ON = PWM_MAX_DUTY;
 
 // ---------------------------------------------------------------------------
 // Wi-Fi dashboard
