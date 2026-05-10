@@ -83,10 +83,15 @@ void setPeltierPower(SystemData &data, uint8_t power) {
   data.peltierActive = power > 0;
 }
 
+void setHumidifierPower(SystemData &data, uint8_t power) {
+  power = clampDuty(power);
+  writePwmOutput(HUMIDIFIER_PIN, HUMIDIFIER_PWM_CHANNEL, power);
+  data.humidifierPower = power;
+  data.humidifierActive = power > 0;
+}
+
 void setHumidifier(SystemData &data, bool enabled) {
-  writePwmOutput(HUMIDIFIER_PIN, HUMIDIFIER_PWM_CHANNEL,
-                 enabled ? HUMIDIFIER_ON_POWER : 0);
-  data.humidifierActive = enabled;
+  setHumidifierPower(data, enabled ? HUMIDIFIER_ON_POWER : 0);
 }
 
 void setFanSpeed(SystemData &data, uint8_t speed) {

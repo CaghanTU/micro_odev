@@ -109,14 +109,22 @@ constexpr float HUMIDITY_TOLERANCE_RH = 2.0F;
 constexpr float OVER_TEMPERATURE_THRESHOLD_C = 50.0F;
 constexpr float OVER_TEMPERATURE_CLEAR_C = 50.0F;
 
-// PID constants are provided for future tuning. The v1 firmware uses safe
-// threshold control by default instead of depending on aggressive PID tuning.
-constexpr double TEMPERATURE_PID_KP = 2.0;
-constexpr double TEMPERATURE_PID_KI = 0.1;
-constexpr double TEMPERATURE_PID_KD = 0.5;
-constexpr double HUMIDITY_PID_KP = 2.0;
-constexpr double HUMIDITY_PID_KI = 0.05;
-constexpr double HUMIDITY_PID_KD = 0.25;
+#ifndef ENABLE_PID_CONTROL
+#define ENABLE_PID_CONTROL 1
+#endif
+
+constexpr double TEMPERATURE_PID_KP = 45.0;
+constexpr double TEMPERATURE_PID_KI = 0.5;
+constexpr double TEMPERATURE_PID_KD = 20.0;
+constexpr double HUMIDITY_PID_KP = 10.0;
+constexpr double HUMIDITY_PID_KI = 0.2;
+constexpr double HUMIDITY_PID_KD = 4.0;
+
+constexpr double TEMPERATURE_PID_INTEGRAL_LIMIT = 80.0;
+constexpr double HUMIDITY_PID_INTEGRAL_LIMIT = 120.0;
+constexpr double TEMPERATURE_PID_OUTPUT_LIMIT = 220.0;
+constexpr double HUMIDITY_PID_OUTPUT_LIMIT = 255.0;
+constexpr uint8_t MIN_ACTIVE_PWM_POWER = 60;
 
 // ---------------------------------------------------------------------------
 // PWM / actuator configuration

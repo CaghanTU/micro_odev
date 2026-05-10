@@ -50,24 +50,24 @@ The last valid temperature and humidity readings are not overwritten with invali
 
 For hardware-free verification, a compile-time simulation mode is available but disabled by default. In simulation mode, fake temperature and humidity values are generated so the control logic, LCD state, web dashboard, alarms, and logs can be compiled and exercised without a DHT11 sensor.
 
-## 5. Temperature and Humidity Control Logic
+## 5. Temperature and Humidity PID Control Logic
 
-The first firmware version uses safe threshold-based control. PID constants are defined in `config.h` for future tuning, but the current implementation does not depend on aggressive PID behavior.
+The firmware uses PID-based stabilization when `ENABLE_PID_CONTROL` is enabled in `config.h`. The controller calculates the temperature and humidity error from the active setpoints, accumulates the integral term with anti-windup limits, and uses the derivative term to reduce overshoot. Safety checks still run before PID control.
 
-Temperature control uses a tolerance of ±1°C:
+Temperature PID output is signed. Positive output drives the heater PWM, negative output drives the Peltier PWM, and the firmware still prevents heater and Peltier outputs from being active at the same time. A ±1°C deadband is kept so the system does not chatter around the setpoint:
 
 | Condition | Action |
 |---|---|
-| Temperature < setpoint - 1°C | Heater enabled, Peltier disabled, fan low. |
-| Temperature > setpoint + 1°C | Peltier enabled, heater disabled, circulation fan high, Peltier cooling fan high. |
+| Temperature < setpoint - 1°C | Heater PWM controlled by PID, Peltier disabled, fan low. |
+| Temperature > setpoint + 1°C | Peltier PWM controlled by PID, heater disabled, circulation fan high, Peltier cooling fan high. |
 | Temperature within tolerance | Heater and Peltier disabled. |
 
-Humidity control uses a tolerance of ±5% RH:
+Humidity PID output is also signed. Positive output drives the humidifier PWM when humidity is below the setpoint band, while negative output enables drying airflow when humidity is above the setpoint band. A ±2% RH deadband is kept for stability:
 
 | Condition | Action |
 |---|---|
-| Humidity < setpoint - 5% RH | Humidifier enabled, fan low. |
-| Humidity > setpoint + 5% RH | Humidifier disabled, fan high. |
+| Humidity < setpoint - 2% RH | Humidifier PWM controlled by PID, fan low. |
+| Humidity > setpoint + 2% RH | Humidifier disabled, fan high. |
 | Humidity within tolerance | Humidifier disabled. |
 
 The displayed `SystemState` represents the dominant control state. If temperature and humidity both require action, temperature control has priority for the dominant state, but safe actuator combinations are still allowed. For example, heater + humidifier + low fan may run together. Heater and Peltier are never allowed to run at the same time.
